@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -22,15 +23,25 @@ public class PlayerMovement : MonoBehaviour
     [Space]
     [SerializeField] private Transform arrowSpawnPosition;
     [SerializeField] private Transform arrowPrefab;
+    [SerializeField] private float reloadingTime = 1f;
+    [SerializeField] private Image reloadingBar;
 
     [Header("Walking")]
     [SerializeField] private Transform footPrint_L;
     [SerializeField] private Transform footPrint_R;
 
+    private float _reloadintTimer;
+    private bool _isReloading = false;
+
+    private ArrowPool _arrowPool;
+    private FootprintsPool _footprintsPool;
+
     private void Start ()
     {
         _characterController = GetComponent<CharacterController>();
         _animator = GetComponent<Animator>();
+        _arrowPool = GetComponent<ArrowPool>();
+        _footprintsPool = GetComponent<FootprintsPool>();
         shootButton.onClick.AddListener(HandleShooting);
     }
 
@@ -49,7 +60,10 @@ public class PlayerMovement : MonoBehaviour
 
     private void HandleShooting()
     {
-        _animator.SetTrigger("Shoot");
+        if (!_isReloading) {
+            _animator.SetTrigger("Shoot");
+            _isReloading = true;
+        }     
     }
 
     public void MoveCharacter (Vector3 moveDirection)
@@ -79,20 +93,51 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
+    private void Reload()
+    {
+        StartCoroutine(ReloadCoroutine());
+    }
+
+    private IEnumerator ReloadCoroutine()
+    {
+        while (_reloadintTimer < reloadingTime) {
+            _reloadintTimer += Time.deltaTime;
+            reloadingBar.fillAmount = Mathf.Clamp(_reloadintTimer, 0, 1);
+            yield return null;
+        }
+        _isReloading = false;
+        _reloadintTimer = 0f;
+        reloadingBar.fillAmount = 0f;
+        yield return null;
+    }
+
+    private void InitArrow()
+    {
+        ArrowProjectile arrow = _arrowPool.GetObject();
+        arrow.transform.position = arrowSpawnPosition.position;
+        arrow.transform.rotation = Quaternion.LookRotation(transform.forward, Vector3.up);
+        arrow.Init();
+    }
+
+    // Shoot, spawn foorprint methods are called from animation event
     private void Shoot ()
     {
-        Vector3 aimDirection = transform.forward;//(_mouseWorldPosition - bulletSpawnPosition.position).normalized;
-        Instantiate(arrowPrefab, arrowSpawnPosition.position,
-        Quaternion.LookRotation(aimDirection, Vector3.up));
+        InitArrow();
+        Reload();
     }
 
     private void SpawnFootprintLeft()
     {
-        Instantiate(footPrint_L, new Vector3(transform.position.x, 0.002f, transform.position.z), transform.rotation);
+        GameObject leftFootPrint = _footprintsPool.GetLeftFootprint();
+        leftFootPrint.transform.position = new Vector3(transform.position.x, 0.002f, transform.position.z);
+        leftFootPrint.transform.rotation = transform.rotation;
+
     }
 
     private void SpawnFootprintRight()
     {
-        Instantiate(footPrint_R, new Vector3(transform.position.x, 0.002f, transform.position.z), transform.rotation);
+        GameObject rightFootPrint = _footprintsPool.GetRightFootprint();
+        rightFootPrint.transform.position = new Vector3(transform.position.x, 0.002f, transform.position.z);
+        rightFootPrint.transform.rotation = transform.rotation;
     }
 }
