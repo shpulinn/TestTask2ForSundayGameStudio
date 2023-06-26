@@ -6,6 +6,7 @@ public class ArrowProjectile : MonoBehaviour
     [SerializeField] private float arrowDamage = 20f;
 
     private Rigidbody _arrowRigidbody;
+    private ArrowPool _pool;
 
     public float ArrowDamage
     {
@@ -15,15 +16,16 @@ public class ArrowProjectile : MonoBehaviour
     private void Awake ()
     {
         _arrowRigidbody = GetComponent<Rigidbody>();
+        _pool = FindObjectOfType<ArrowPool>();
     }
 
-    private void Start ()
+    public void Init ()
     {
         _arrowRigidbody.velocity = transform.forward * arrowSpeed;
     }
 
     private void OnTriggerEnter (Collider other)
     {
-        Destroy(gameObject);
+        _pool.ReleaseObject(gameObject);
     }
 }
